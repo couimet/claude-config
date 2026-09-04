@@ -1,0 +1,32 @@
+# Issue #26: Create `claude-config` repo
+
+Base branch: origin/main
+Parent: none
+
+## Context
+
+This idea-garden seed asks how to capture a default `CLAUDE.md` plus related global Claude Code configuration in version control without ever risking MCP credentials or keys. The body calls the gist at https://gist.github.com/couimet/68cee82a18ed86f8e9d9827520379823 good. That gist documents the machine's global Bash allowlist, which lives in `~/.claude/settings.json` under `permissions.allow`.
+
+CodeRabbit's analysis in the issue comment recommends a dedicated `claude-config` repository that manages only a curated, portable, non-secret layer of the Claude Code configuration. The core rule: treat `~/.claude` as runtime state (credentials, session data, history, machine-specific settings) and never clone a repo into it. Keep `~/.claude/settings.json` and `~/.claude/mcp.json` machine-local and untracked.
+
+The user answered the two planning questions. Q001: the repo is public, so every committed file stays fully generic and secret-free. Q002: v1 content is the scaffold minus the settings and mcp templates, plus tests. The repo deliberately does not version `settings.json` or `mcp.json` templates at all, so credentials cannot enter the repo by construction.
+
+Precedent: idea-garden issue https://github.com/couimet/idea-garden/issues/2 spawned `couimet/github-actions` through this same promote path, and `couimet/my-claude-skills` already version-controls skills with an install script. The repo-level workflow for spawning is documented at `.claude/skills/spawn-repo/SKILL.md`.
+
+## Assumptions Made
+
+- Spawn `claude-config` now through `/spawn-repo`; the idea has matured and this matches the promote-when-ready path used for `couimet/github-actions`.
+- Adopt CodeRabbit's curated-layer architecture: `~/.claude` is runtime state and the repo manages a curated config layer only, never the live directory. Because the repo is public, every committed file must stay fully generic and secret-free.
+- Machine-local state is excluded from the repo entirely: there is no `settings.shared.json` and no `mcp.json.example`, because `settings.json` and `mcp.json` are never managed by the repo. MCP credentials stay in local files or a secret manager.
+- Implementation of the repo's content happens in the new repo against its own tracking issue, not in idea-garden. The idea-garden deliverable is the self-contained `HANDOFF.md` brief and the spawn itself.
+
+## Plan
+
+1. Generate `.claude-work/issues/26/HANDOFF.md` from the template at `.claude/skills/spawn-repo/handoff-template.md`, filling every `{{PLACEHOLDER}}` and deleting every `<!--` guidance comment. The brief must stand alone because the spawned repo receives only `.claude-work/issues/26/`, not the idea-garden notes or question files.
+2. Lock the Decisions table and Target design: the curated-layer rule (never clone into `~/.claude`; a worktree holds only portable, secret-free files); v1 content is `CLAUDE.md` (default operating rules, short and stable), `install.sh`, `README.md`, `.gitignore`, a pre-commit secret scanner, and BATS tests for `install.sh` with a CI pipeline that runs them. Explicitly out of scope: `settings.shared.json` and `mcp.json.example`, because `~/.claude/settings.json` and `~/.claude/mcp.json` stay wholly machine-local, untracked, and unmanaged.
+3. Specify the `install.sh` safety contract: it links or copies only approved, secret-free files (the default `CLAUDE.md` into `~/.claude/CLAUDE.md`), is idempotent on re-run, and must never create or overwrite `~/.claude/settings.json` or `~/.claude/mcp.json`. Cover that contract with BATS tests, and have CI run the suite (the couimet CI pattern).
+4. Inline the secret controls: `.gitignore` ignores machine-local state (`settings.json`, `mcp.json`, `*.local.*`, `.env`, private-key patterns); a pre-commit secret scanner blocks token-like values and credential field names; staged changes are reviewed before every commit. The default `CLAUDE.md` stays secret-free by construction, and a public repo means generic content only.
+5. Record in Constraints the boundary against `couimet/my-claude-skills` (skills vs config) so the two repos do not both manage `~/.claude`, and document the new-machine bootstrap flow (clone the repo, run `install.sh`, which links `CLAUDE.md` only). Fill the Sources and Appendix sections with verbatim gist content and the CodeRabbit recommendation so the HANDOFF is self-contained. List under Open questions and deferred items whatever the child repo must still decide, such as the exact default-`CLAUDE.md` prose and symlink-versus-copy install behavior.
+6. Re-read `.claude-work/issues/26/HANDOFF.md` cold and verify no `{{PLACEHOLDER}}` remains and no `<!--` guidance comment survives, the self-contained check the spawn script enforces.
+7. Invoke `/spawn-repo claude-config` with a description (public, the default visibility). The script creates the repo, clones `../claude-config`, opens a fresh tracking issue cross-linked to the seed, copies and re-keys `.claude-work/issues/26/` into the new repo, prepends the bootstrap README banner, commits and pushes, posts the handoff comment on this seed, and closes idea-garden issue https://github.com/couimet/idea-garden/issues/26 as completed.
+8. Verify the spawn output (new repo URL, tracking issue number, seed closed) and STOP. The `/spawn-repo` skill always stops here; a fresh agent in the `claude-config` workspace reads `HANDOFF.md` and implements the content against the new repo's own tracking issue.

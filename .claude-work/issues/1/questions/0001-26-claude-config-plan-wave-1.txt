@@ -1,0 +1,33 @@
+# 26 claude-config plan wave 1
+
+## Q001: Should the claude-config repo be private or public?
+
+Context: The issue body and CodeRabbit's analysis both flag that a personal config repo can expose tooling choices, MCP server topology, internal hostnames, and a personal permission allowlist. CodeRabbit recommends a private repo when the config exposes non-secret-but-sensitive details. The `/spawn-repo` skill defaults to public and takes `--private` as opt-in, so this answer changes the spawn invocation and how guarded `mcp.json.example` must be.
+
+Options:
+A) Private - CodeRabbit's safer default; nothing leaks, cost is only that the repo is not publicly shareable.
+B) Public - matches my-claude-skills and github-actions; config is world-readable, so the committed examples must stay fully generic.
+C) Private now, public later - start private and flip visibility if it proves shareable; GitHub cannot un-leak an accidental public window.
+
+Recommendation: A - a personal config repo reveals tooling and host details, and private GitHub repos cost nothing; flipping private-to-public later is easy, the reverse is not.
+
+**Plan impact:** Step 7 gains or drops the `--private` flag on `/spawn-repo`, and the HANDOFF Constraints section sets how generic `mcp.json.example` and `settings.shared.json` must be.
+
+A001: B
+
+---
+
+## Q002: What should the claude-config repo's v1 content scope be?
+
+Context: The issue title and body ask for a repo that captures a default `CLAUDE.md` and protects MCP credentials. CodeRabbit's analysis recommends a fuller scaffold: `CLAUDE.md`, `settings.shared.json`, `mcp.json.example`, `install.sh`, `README.md`, `.gitignore`, plus a secret scanner. The answer decides what the HANDOFF brief locks in as the repo's purpose and what the child repo's first tracking issue must deliver.
+
+Options:
+A) Full CodeRabbit scaffold - one first cut delivering CLAUDE.md plus the settings template, mcp example, install script, and secret guardrails; matches the tight-ship goal in one coherent repo.
+B) Default CLAUDE.md and secret guardrails only - the two things the issue names; defer the settings template and install script to a later issue.
+C) Default CLAUDE.md only - tightest match to the title; no settings, mcp, or install scaffolding yet.
+
+Recommendation: A - the files are all small, they make the no-secrets promise real (install discipline plus a secret scanner), and CodeRabbit's plan itemizes exactly this first cut.
+
+**Plan impact:** HANDOFF steps 2 through 5 (Decisions, Target design, secret controls, Open items) deepen or thin out; the child repo's first tracking issue breadth follows the same scope.
+
+A002: Option A, except for mcp.json.example and settings.shared.json that will not be needed. Add BATS tests for `install.sh` script and CI pipeline testing it.
