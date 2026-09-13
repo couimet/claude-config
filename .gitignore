@@ -1,0 +1,25 @@
+# Claude skill working directories
+.claude-work/
+
+# Local editor history
+.history/
+
+# Machine-local Claude Code state. These files belong to ~/.claude on each
+# machine and are never managed or committed by this repo.
+settings.json
+mcp.json
+
+# Machine-local and environment state
+*.local.*
+.env
+.env.*
+
+# Private keys
+*.pem
+*.key
+*.ppk
+id_rsa
+id_ed25519
+
+# OS junk
+.DS_Store
