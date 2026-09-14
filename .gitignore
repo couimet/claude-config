@@ -8,6 +8,7 @@
 # machine and are never managed or committed by this repo.
 settings.json
 mcp.json
+.claude.json
 
 # Machine-local and environment state
 *.local.*
