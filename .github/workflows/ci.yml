@@ -18,3 +18,28 @@ jobs:
           persist-credentials: false
 
       - uses: couimet/github-actions/markdownlint@main
+
+  # shellcheck and the BATS suite run from the shared reusable workflow, so this
+  # repository holds one copy of their configuration. Its jobs run on
+  # ubuntu-latest, unlike the pinned image the other jobs use.
+  shell-ci-checks:
+    uses: couimet/github-actions/.github/workflows/shell-ci-checks.yml@main
+    with:
+      shellcheck-timeout-minutes: 5
+      bats-test-timeout-minutes: 5
+      publish-comment: 'false'
+    permissions:
+      contents: read
+
+  # The shared collection has no secret-scan action, so this job calls the
+  # repository script. It is the check the Makefile mirrors with `make scan`.
+  secret-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Scan tracked content for secrets
+        run: ./scripts/secret-scan.sh tree

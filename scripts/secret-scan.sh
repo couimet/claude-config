@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#
+# secret-scan.sh - lightweight secret scanner for this repository.
+#
+# Usage: secret-scan.sh [staged|tree]
+#   staged (default): scan lines being added by `git diff --cached`.
+#   tree: scan all tracked file contents (used by CI).
+#
+# Exits 1 when a likely secret is found. Matched content is never printed, so
+# a real secret does not leak into hook or CI logs. The checks are heuristic
+# and deliberately conservative; GitHub secret scanning and push protection on
+# a public repository are the backstop this tool is not.
+set -euo pipefail
+
+mode="${1:-staged}"
+case "$mode" in
+  staged|tree) ;;
+  *)
+    echo "usage: $0 [staged|tree]" >&2
+    exit 2
+    ;;
+esac
+
+# Token-like values, private-key blocks, and credential field assignments.
+PATTERN='ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|sk-[A-Za-z0-9-]{16,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(api[_-]?key|auth[_-]?token|access[_-]?token|client[_-]?secret|private[_-]?key|password|passwd|secret)[[:space:]]*[:=][[:space:]]*[^[:space:],;]{8,}'
+
+emit_lines() {
+  case "$mode" in
+    staged)
+      # Only the lines a commit is about to add, with the leading '+' removed.
+      git diff --cached -U0 --diff-filter=ACM | sed -n 's/^+//p' | sed '/^++/d'
+      ;;
+    tree)
+      local file
+      while IFS= read -r -d '' file; do
+        [ -f "$file" ] && cat -- "$file"
+      done < <(git ls-files -z)
+      ;;
+  esac
+}
+
+matches=0
+while IFS= read -r _matched; do
+  matches=$((matches + 1))
+done < <(emit_lines | grep -E "$PATTERN" || true)
+
+if [ "$matches" -gt 0 ]; then
+  echo "secret-scan: $matches possible secret(s) matched in $mode content; commit blocked. Matched lines are suppressed." >&2
+  exit 1
+fi
+
+echo "secret-scan: clean ($mode)"
+exit 0
