@@ -3,7 +3,7 @@
 # secret-scan.sh - lightweight secret scanner for this repository.
 #
 # Usage: secret-scan.sh [staged|tree]
-#   staged (default): scan lines being added by `git diff --cached`.
+#   staged (default): scan the lines a commit adds, each prefixed with ">".
 #   tree: scan all tracked file contents (used by CI).
 #
 # Exits 1 when a likely secret is found. Matched content is never printed, so
@@ -27,13 +27,26 @@ PATTERN='ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|sk
 emit_lines() {
   case "$mode" in
     staged)
-      # Only the lines a commit is about to add, with the leading '+' removed.
-      git diff --cached -U0 --diff-filter=ACM | sed -n 's/^+//p' | sed '/^++/d'
+      # Only the lines a commit is about to add. --output-indicator-new marks
+      # each added line with '>', so the "+++ b/<path>" header keeps its own
+      # leading '+' and an added line that starts with "++" is not mistaken for
+      # a header. --text makes git emit a hunk for a binary file, and
+      # --no-ext-diff with --no-textconv stop a local driver from replacing the
+      # diff output. No --diff-filter, so a rename or a type change is read too.
+      git diff --cached --no-ext-diff --no-textconv --text -U0 \
+        --output-indicator-new='>' | grep -a '^>' || true
       ;;
     tree)
       local file
       while IFS= read -r -d '' file; do
-        [ -f "$file" ] && cat -- "$file"
+        # Git stores a symlink as a blob that holds its target string, so scan
+        # that string. `[ -f ]` follows the link and is false for a dangling
+        # symlink, which would hide the target from this scan.
+        if [ -L "$file" ]; then
+          readlink -- "$file"
+        elif [ -f "$file" ]; then
+          cat -- "$file"
+        fi
       done < <(git ls-files -z)
       ;;
   esac
@@ -42,7 +55,7 @@ emit_lines() {
 matches=0
 while IFS= read -r _matched; do
   matches=$((matches + 1))
-done < <(emit_lines | grep -E "$PATTERN" || true)
+done < <(emit_lines | grep -aE "$PATTERN" || true)
 
 if [ "$matches" -gt 0 ]; then
   echo "secret-scan: $matches possible secret(s) matched in $mode content; commit blocked. Matched lines are suppressed." >&2

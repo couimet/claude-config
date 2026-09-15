@@ -134,8 +134,8 @@ commit_all() {
 }
 
 @test "ignores the diff header when a file name looks like a token" {
-  # Without the scanner's `sed '/^++/d'` filter, the "+++ b/<name>" header line
-  # would itself match the pattern and fail the scan.
+  # The scanner selects added lines by their ">" marker, so the "+++ b/<name>"
+  # header line never reaches the pattern.
   printf 'harmless content\n' > "$(github_token)"
   git add .
 
@@ -143,4 +143,60 @@ commit_all() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"clean (staged)"* ]]
+}
+
+@test "blocks a staged line whose content starts with a double plus" {
+  # The old extractor stripped the leading "+" and then deleted every line that
+  # began with "++". Added content that starts with "++" therefore read as a
+  # file header and was skipped.
+  printf '++%s\n' "$(api_key_line)" > config.txt
+  git add config.txt
+
+  run "$SCAN" staged
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"commit blocked"* ]]
+}
+
+@test "blocks a token added inside a binary file" {
+  # Without --text, git reports a binary addition as "Binary files ... differ"
+  # and emits no hunk, so the added bytes never reach the scanner.
+  printf 'prefix\0%s\0suffix' "$(github_token)" > blob.bin
+  git add blob.bin
+
+  run "$SCAN" staged
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"commit blocked"* ]]
+  [[ "$output" != *"$(github_token)"* ]]
+}
+
+@test "blocks a token added in the same commit as a rename" {
+  # A rename entry carries status R. A `--diff-filter=ACM` argument dropped that
+  # entry, so the lines the commit adds were never read.
+  git -C "$REPO" config diff.renames true
+  printf 'line one\nline two\nline three\nline four\nline five\n' > notes.txt
+  commit_all
+  git mv notes.txt renamed.txt
+  printf '%s\n' "$(api_key_line)" >> renamed.txt
+  git add -A
+
+  run "$SCAN" staged
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"commit blocked"* ]]
+}
+
+@test "blocks a token stored as the target of a dangling symlink" {
+  # Git stores a symlink as a blob that holds its target string. The old `-f`
+  # test followed the link and was false for a dangling one, so a tree scan
+  # never read the target.
+  ln -s "$(api_key_line)" dangling-link
+  commit_all
+
+  run "$SCAN" tree
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"possible secret(s) matched in tree content"* ]]
+  [[ "$output" != *"$(api_key_line)"* ]]
 }
