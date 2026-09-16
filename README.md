@@ -8,6 +8,9 @@ The repository manages a single curated layer of your Claude Code setup: the def
 
 - `CLAUDE.md` — project instructions for working in this repository (never installed).
 - `templates/claude/CLAUDE.md` — the machine-wide default operating rules, installed to `~/.claude/CLAUDE.md` (short, stable, secret-free).
+- `install.sh` — links the managed file into `~/.claude/CLAUDE.md`.
+- `scripts/secret-scan.sh` — blocks a commit whose staged changes look like they carry a secret.
+- `bats-tests/` — the BATS tests for `install.sh` and `scripts/secret-scan.sh`.
 
 ## The no-secrets rule
 
@@ -15,20 +18,57 @@ Everything committed here is public and stays generic. Credentials, tokens, keys
 
 - `~/.claude/settings.json` and `~/.claude.json` are machine-local and are never tracked, templated, or created by this repo.
 - Treat `~/.claude` as runtime state: credentials, session data, and machine-specific settings live there, never in git.
+- `scripts/secret-scan.sh` guards this repository. Run `make scan` to check the tracked files, or enable the pre-commit hook to check every commit.
 
 ## Install on a new machine
 
-Clone the repository, then link the managed file into place:
+Clone the repository to the directory you choose, then run the installer from inside it:
 
 ```sh
-git clone https://github.com/couimet/claude-config.git ~/src/claude-config
-mkdir -p ~/.claude
-ln -sfn ~/src/claude-config/templates/claude/CLAUDE.md ~/.claude/CLAUDE.md
+git clone https://github.com/couimet/claude-config.git path/to/claude-config
+cd path/to/claude-config
+./install.sh
 ```
 
-The link maps `templates/claude/CLAUDE.md` to `~/.claude/CLAUDE.md`. The target is a symlink, so pulling new commits in `claude-config` updates the live file with no reinstall. The `ln -sfn` command replaces an existing symlink. If a regular file already sits at `~/.claude/CLAUDE.md`, move it aside first.
+Replace `path/to/claude-config` with the destination you want.
 
-Claude Code writes `~/.claude/settings.json` and `~/.claude.json` on the machine when you change an option or add an MCP server. This repository ships no templates for them.
+The installer creates `~/.claude/CLAUDE.md` as a symlink to `templates/claude/CLAUDE.md`. The target is a symlink, so pulling new commits in `claude-config` updates the live file with no reinstall. The installer prints one of three results: `installed`, `updated`, or `unchanged`.
+
+The installer leaves an existing regular file or directory at the target alone. It prints a warning and installs nothing. Remove that file yourself if you want the installer to manage it.
+
+Claude Code writes `~/.claude/settings.json` and `~/.claude.json` on the machine when you change an option or add an MCP server. This repository ships no templates for them, and the installer never creates or edits them.
+
+## Local development
+
+Install the tools with `mise`:
+
+```sh
+make install-prereqs
+```
+
+That target runs `mise install`, then checks that `node`, `bats`, and `shellcheck` resolve on your `PATH`. Activate `mise` in your shell first, or other installations of those tools win.
+
+Run every gate with one command:
+
+```sh
+make check
+```
+
+`make check` runs the four gates that CI runs:
+
+- `make lint` — markdownlint and shellcheck
+- `make test` — the BATS suite in `bats-tests/`
+- `make scan` — `scripts/secret-scan.sh tree`
+
+Enable the pre-commit hook in your clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+The hook runs `scripts/secret-scan.sh staged`. It blocks a commit whose staged changes look like they carry a secret.
+
+The hook is a plain script in `.githooks/`, so git runs it directly. It needs no extra tool. This repository does not use the `pre-commit` framework.
 
 ## Boundaries
 

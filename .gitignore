@@ -4,8 +4,9 @@
 # Local editor history
 .history/
 
-# Machine-local Claude Code state. These files belong to ~/.claude on each
-# machine and are never managed or committed by this repo.
+# Machine-local Claude Code state. These files belong to the machine and are
+# never managed or committed by this repo. `~/.claude.json` holds user-scope
+# MCP servers; `mcp.json` stays as a defensive entry.
 settings.json
 mcp.json
 .claude.json

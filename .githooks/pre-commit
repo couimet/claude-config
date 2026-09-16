@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: blocks commits whose staged changes look like secrets.
+# Enabled per-clone with: git config core.hooksPath .githooks
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+exec "$here/../scripts/secret-scan.sh" staged
