@@ -10,7 +10,7 @@ Project instructions for working in the claude-config repository. This file desc
 
 - Read `README.md` before editing.
 - Keep each change small and reviewable.
-- Never run `git commit` yourself. Stage your changes, summarize them, and hand off to the human, who reviews the staged diff and commits.
+- Never change the git index, in either direction, and never run `git commit`. Follow the rule for the index in `templates/claude/CLAUDE.md` under "Commits and history".
 - This repository is public and stays secret-free. `~/.claude/settings.json` and `~/.claude.json` are machine-local and never copied, templated, or committed here.
 
 ## GitHub Actions
