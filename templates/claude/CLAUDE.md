@@ -34,7 +34,7 @@ If a rule makes a statement wrong, keep the statement correct. Then note the exc
 ## Commits and history
 
 - Never change the git index, in either direction. The index holds the human's review state, so a change destroys review progress.
-- This rule covers every command that adds to or removes from the index. Examples: `git add`, `git add -N`, `git commit -a`, `git rm`, `git mv`, `git restore --staged`, `git reset`, `git stash`, `git apply --index`, and `git checkout <path>`.
+- This rule covers every command that adds to or removes from the index. Examples: `git add`, `git add -N`, `git commit -a`, `git rm`, `git mv`, `git restore --staged`, `git reset`, `git stash`, `git apply --index`, and `git checkout <tree-ish> -- <path>`.
 - Never run `git commit` yourself.
 - Leave every change in the working tree. Summarize the changes, list the changed files, and hand off to the human, who stages and commits.
 - Exception: run a forbidden command only when the human's own message in this conversation asks for it. Run it only for the files that the message names.
