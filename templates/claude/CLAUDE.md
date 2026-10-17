@@ -29,6 +29,9 @@ If a rule makes a statement wrong, keep the statement correct. Then note the exc
 
 - Read the repository's CLAUDE.md and README before editing anything. Project rules layer on top of this file and win when they conflict.
 - Run the project's checks (tests, lint, build) before handing off work, and keep each change small enough to review.
+- Never pass a flag that names the current directory, a parent directory, or the current repository. Examples: `git -C`, `pnpm --dir`, `npm --prefix`, and `gh -R`.
+- Use `git -C <path>` only when `<path>` is outside the working directory tree.
+- Do not use `cd` to reach a path. Run the command from the working directory, or pass an absolute path to a tool that accepts one.
 - Ask before acting when a task is ambiguous or the change is hard to undo.
 
 ## Commits and history
